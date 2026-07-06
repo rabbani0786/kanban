@@ -1,0 +1,30 @@
+node_modules/
+.next/
+dist/
+out/
+.env*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Vitest
+coverage/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# SQLite
+*.db
+*.sqlite3

@@ -26,11 +26,3 @@ export type BoardAction =
       toColumnId: string;
       toIndex: number;
     };
-
-export const COLUMN_IDS = [
-  "col-backlog",
-  "col-todo",
-  "col-in-progress",
-  "col-review",
-  "col-done",
-] as const;

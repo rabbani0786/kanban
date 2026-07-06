@@ -1,25 +1,80 @@
 # Kanban Project Manager
 
-## Instructions
+A single-board Kanban app with drag-and-drop, a Python backend, SQLite persistence, and an AI assistant that creates, edits, and moves cards from natural-language instructions.
 
-This is a skeleton project to be the basis for your Kanban project for Week 1 of the Complete AI Coder Course. See the course resources for more.
+## Stack
 
-You should clone this repo within your projects directory with:
+- Frontend: Next.js (client-rendered), TypeScript
+- Backend: FastAPI (Python, managed with `uv`)
+- Database: SQLite
+- AI: Anthropic Claude, via tool use
+- Everything runs in Docker
 
-`git clone https://github.com/ed-donner/kanban.git`
+## Setup
 
-And then refine the AGENTS.md before using in your Coding Agent of choice.
+### Docker (recommended)
 
-If you don't have git installed, you can [install it here](https://git-scm.com/install/) and you might need to reboot afterwards.
+```bash
+cp .env.example .env
+# edit .env and set ANTHROPIC_API_KEY if you want the AI assistant
+docker compose up --build
+```
 
-## Contributing your AGENTS.md
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
 
-If you have suggested AGENTS.md changes that have worked well for you, please contribute them to benefit other students! Follow the instructions linked [here](https://edwarddonner.com/pr) to raise a PR to put it in community_contributions. Name your file something like ED_DONNER_AGENTS.md but with your name..
+Sign in with username `user` and password `password`. Everything works without `ANTHROPIC_API_KEY` set except the AI assistant, which will show a clear error if used.
 
-I can't wait to see your changes.
+### Local development (without Docker)
 
-## Posting your app
+Backend:
 
-When you've successfully built a Kanban app, if you'd like to post about it on LinkedIn and tag me, then I'll weigh in to amplify your success and draw more attention to your achievements.
+```bash
+cd backend
+uv sync
+uv run uvicorn app.main:app --reload --port 8000
+```
 
-If you see other students doing this, please weigh in yourself to add your support and encouragement. It's so helpful for the community if we support each other.
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:3000.
+
+## Features
+
+- One board with five renameable columns
+- Cards with a title and details
+- Drag and drop between columns
+- Add and delete cards
+- Data persists in SQLite across restarts
+- Sign-in (hardcoded credentials for this MVP)
+- AI assistant in the sidebar: create, edit, and move cards from natural language
+
+## Tests
+
+Backend:
+
+```bash
+cd backend
+uv run pytest                         # mocks the AI call
+uv run --env-file .env pytest         # also runs the live AI test, needs ANTHROPIC_API_KEY
+```
+
+Frontend unit tests:
+
+```bash
+cd frontend
+npm run test:coverage
+```
+
+Frontend end-to-end tests (spins up its own backend and frontend on separate ports with a throwaway database):
+
+```bash
+cd frontend
+npx playwright test
+```
