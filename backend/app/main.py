@@ -25,9 +25,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(title="Kanban API", lifespan=lifespan)
 
+_default_allowed_origins = ["http://localhost:3000", "http://localhost:3100"]
+_allowed_origins_env = os.environ.get("ALLOWED_ORIGINS")
+allowed_origins = (
+    [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()]
+    if _allowed_origins_env
+    else _default_allowed_origins
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3100"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
