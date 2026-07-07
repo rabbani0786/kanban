@@ -65,7 +65,6 @@ afterEach(() => {
   vi.mocked(api.deleteCard).mockReset();
   vi.mocked(api.moveCard).mockReset();
   vi.mocked(api.sendChatMessage).mockReset();
-  vi.mocked(api.getBottleneckAdvice).mockReset();
 });
 
 describe("Board loading", () => {
@@ -319,28 +318,5 @@ describe("AI chat", () => {
     expect(api.sendChatMessage).toHaveBeenCalledWith("Add a card called Added by AI");
     expect(await screen.findByText("Added the card.")).toBeInTheDocument();
     expect(await screen.findByText("Added by AI")).toBeInTheDocument();
-  });
-});
-
-describe("Bottleneck advice", () => {
-  it("fetches and shows advice when the button is clicked", async () => {
-    const user = userEvent.setup();
-    const boardWithBottleneck = structuredClone(initialBoard);
-    boardWithBottleneck.cards["card-1"].statusChangedAt = new Date(
-      Date.now() - 6 * 24 * 60 * 60 * 1000
-    ).toISOString();
-    vi.mocked(api.fetchBoard).mockResolvedValue(boardWithBottleneck);
-    vi.mocked(api.getBottleneckAdvice).mockResolvedValue({
-      advice: "Prioritize Research competitors today.",
-    });
-    render(<Board />);
-    await screen.findByTestId("column-col-backlog");
-
-    await user.click(screen.getByRole("button", { name: "Get AI advice" }));
-
-    expect(api.getBottleneckAdvice).toHaveBeenCalledTimes(1);
-    expect(
-      await screen.findByText("Prioritize Research competitors today.")
-    ).toBeInTheDocument();
   });
 });

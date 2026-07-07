@@ -16,12 +16,10 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { boardReducer } from "@/lib/boardReducer";
-import { computeBottlenecks } from "@/lib/alerts";
 import {
   createCard,
   deleteCard,
   fetchBoard,
-  getBottleneckAdvice,
   moveCard,
   renameColumn,
   sendChatMessage,
@@ -30,7 +28,6 @@ import type { Board as BoardType, Card } from "@/lib/types";
 import { Column } from "./Column";
 import { CardPreview } from "./CardPreview";
 import { ChatPanel } from "./ChatPanel";
-import { BottlenecksPanel } from "./BottlenecksPanel";
 
 function findColumnIdByCardId(
   columns: BoardType["columns"],
@@ -207,11 +204,6 @@ export function Board() {
                 {actionError}
               </p>
             ) : null}
-
-            <BottlenecksPanel
-              bottlenecks={computeBottlenecks(board)}
-              onGetAdvice={async () => (await getBottleneckAdvice()).advice}
-            />
 
             <div className="kanban-board">
               {board.columns.map((column) => (
