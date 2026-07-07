@@ -1,25 +1,38 @@
 import os
 from collections.abc import Generator
 
+from sqlalchemy import inspect
 from sqlmodel import Session, SQLModel, create_engine
 
+DATABASE_URL = os.environ.get("DATABASE_URL")
 DATABASE_PATH = os.environ.get("DATABASE_PATH", "kanban.db")
 
-engine = create_engine(f"sqlite:///{DATABASE_PATH}", connect_args={"check_same_thread": False})
+
+def _normalize_database_url(url: str) -> str:
+    """Point SQLAlchemy at the psycopg driver, whatever scheme the provider handed out."""
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://") :]
+    return url
+
+
+if DATABASE_URL:
+    engine = create_engine(_normalize_database_url(DATABASE_URL), pool_pre_ping=True)
+else:
+    engine = create_engine(f"sqlite:///{DATABASE_PATH}", connect_args={"check_same_thread": False})
 
 
 def _ensure_card_status_changed_at_column() -> None:
-    with engine.connect() as connection:
-        columns = connection.exec_driver_sql("PRAGMA table_info(cards)").fetchall()
-        column_names = {row[1] for row in columns}
-        if "status_changed_at" in column_names:
-            return
+    columns = {column["name"] for column in inspect(engine).get_columns("cards")}
+    if "status_changed_at" in columns:
+        return
 
+    with engine.begin() as connection:
         connection.exec_driver_sql("ALTER TABLE cards ADD COLUMN status_changed_at TIMESTAMP")
         connection.exec_driver_sql(
             "UPDATE cards SET status_changed_at = CURRENT_TIMESTAMP WHERE status_changed_at IS NULL"
         )
-        connection.commit()
 
 
 def init_db() -> None:

@@ -6,6 +6,7 @@ from app.models import User
 
 
 def test_init_db_and_get_session(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "kanban.db"))
 
     from app import db as db_module
@@ -25,6 +26,7 @@ def test_init_db_and_get_session(tmp_path, monkeypatch):
 
 
 def test_database_path_defaults_to_kanban_db(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("DATABASE_PATH", raising=False)
 
     from app import db as db_module

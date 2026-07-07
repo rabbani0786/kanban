@@ -17,8 +17,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         reset_db()
     else:
         init_db()
-    with Session(engine) as session:
-        seed_if_empty(session)
+    if os.environ.get("SEED_DB_ON_STARTUP", "1") == "1":
+        with Session(engine) as session:
+            seed_if_empty(session)
     yield
 
 

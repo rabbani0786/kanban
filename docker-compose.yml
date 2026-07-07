@@ -7,6 +7,7 @@ services:
       - db-data:/data
     environment:
       - DATABASE_PATH=/data/kanban.db
+      - DATABASE_URL=${DATABASE_URL:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 
   frontend:

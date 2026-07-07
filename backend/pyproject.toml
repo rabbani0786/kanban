@@ -7,6 +7,7 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "sqlmodel>=0.0.22",
     "anthropic>=0.69",
+    "psycopg[binary]>=3.2",
 ]
 
 [dependency-groups]
