@@ -181,3 +181,30 @@ def test_stops_after_max_iterations(session, monkeypatch):
     reply = ai.run_chat(session, "keep trying forever")
 
     assert "ran out of steps" in reply
+
+
+def test_advice_raises_a_configuration_error_when_no_api_key_is_set(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    with pytest.raises(ai.AIConfigurationError):
+        ai.generate_bottleneck_advice(['"Migrate DB" has been in "Review" for 6 days.'])
+
+
+def test_advice_returns_the_model_reply(monkeypatch):
+    client = mock_anthropic(monkeypatch, [fake_response("end_turn", [text_block("Pair on it today.")])])
+
+    advice = ai.generate_bottleneck_advice(['"Migrate DB" has been in "Review" for 6 days.'])
+
+    assert advice == "Pair on it today."
+    sent_message = client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Migrate DB" in sent_message
+
+
+def test_advice_tells_the_model_when_there_are_no_bottlenecks(monkeypatch):
+    client = mock_anthropic(monkeypatch, [fake_response("end_turn", [text_block("Board looks healthy.")])])
+
+    advice = ai.generate_bottleneck_advice([])
+
+    assert advice == "Board looks healthy."
+    sent_message = client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "no bottlenecks" in sent_message

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlmodel import Session, select
 
 from app.models import Board, Card, Column
@@ -104,6 +106,8 @@ def move_card(session: Session, card_id: str, to_column_id: str, to_index: int) 
     clamped_index = max(0, min(to_index, len(target_cards)))
     target_cards.insert(clamped_index, card)
     card.column_id = to_column_id
+    if not same_column:
+        card.status_changed_at = datetime.utcnow()
 
     _renumber(session, target_cards)
     if not same_column:

@@ -54,3 +54,7 @@ export function sendChatMessage(message: string): Promise<{ reply: string }> {
     body: JSON.stringify({ message }),
   });
 }
+
+export function getBottleneckAdvice(): Promise<{ advice: string }> {
+  return request<{ advice: string }>("/bottlenecks/advice", { method: "POST" });
+}

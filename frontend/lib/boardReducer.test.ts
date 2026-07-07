@@ -33,6 +33,7 @@ describe("boardReducer", () => {
       id: "card-new",
       title: "New task",
       details: "Details here",
+      statusChangedAt: "2026-01-01T00:00:00.000Z",
     };
 
     const next = boardReducer(initialBoard, {
@@ -64,6 +65,7 @@ describe("boardReducer", () => {
     const next = boardReducer(initialBoard, {
       type: "MOVE_CARD",
       cardId: "card-3",
+      card: initialBoard.cards["card-3"],
       fromColumnId: "col-todo",
       toColumnId: "col-in-progress",
       toIndex: 1,
@@ -77,10 +79,29 @@ describe("boardReducer", () => {
     ).toEqual(["card-5", "card-3", "card-6"]);
   });
 
+  it("updates the card record with the data from the action", () => {
+    const movedCard = {
+      ...initialBoard.cards["card-3"],
+      statusChangedAt: "2026-02-01T00:00:00.000Z",
+    };
+
+    const next = boardReducer(initialBoard, {
+      type: "MOVE_CARD",
+      cardId: "card-3",
+      card: movedCard,
+      fromColumnId: "col-todo",
+      toColumnId: "col-in-progress",
+      toIndex: 1,
+    });
+
+    expect(next.cards["card-3"].statusChangedAt).toBe("2026-02-01T00:00:00.000Z");
+  });
+
   it("reorders a card within the same column", () => {
     const next = boardReducer(initialBoard, {
       type: "MOVE_CARD",
       cardId: "card-3",
+      card: initialBoard.cards["card-3"],
       fromColumnId: "col-todo",
       toColumnId: "col-todo",
       toIndex: 1,
@@ -93,6 +114,7 @@ describe("boardReducer", () => {
 
   it("moves a card into an empty column", () => {
     const emptyColumnBoard: Board = {
+      ...initialBoard,
       columns: initialBoard.columns.map((column) =>
         column.id === "col-done" ? { ...column, cardIds: [] } : column
       ),
@@ -102,6 +124,7 @@ describe("boardReducer", () => {
     const next = boardReducer(emptyColumnBoard, {
       type: "MOVE_CARD",
       cardId: "card-1",
+      card: initialBoard.cards["card-1"],
       fromColumnId: "col-backlog",
       toColumnId: "col-done",
       toIndex: 0,

@@ -6,10 +6,11 @@ import type { Card } from "@/lib/types";
 
 type KanbanCardProps = {
   card: Card;
+  isStale?: boolean;
   onDelete: () => void;
 };
 
-export function KanbanCard({ card, onDelete }: KanbanCardProps) {
+export function KanbanCard({ card, isStale = false, onDelete }: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -28,7 +29,9 @@ export function KanbanCard({ card, onDelete }: KanbanCardProps) {
     <article
       ref={setNodeRef}
       style={style}
-      className={`kanban-card ${isDragging ? "kanban-card-dragging" : ""}`}
+      className={`kanban-card ${isDragging ? "kanban-card-dragging" : ""} ${
+        isStale ? "kanban-card-stale" : ""
+      }`}
       data-testid={`card-${card.id}`}
     >
       <div className="kanban-card-header">
@@ -42,6 +45,16 @@ export function KanbanCard({ card, onDelete }: KanbanCardProps) {
           <span aria-hidden="true">::</span>
         </button>
         <h3 className="kanban-card-title">{card.title}</h3>
+        {isStale ? (
+          <span
+            className="kanban-card-stale-badge"
+            role="img"
+            aria-label={`${card.title} is stale`}
+            title="This card has been in this column for a while"
+          >
+            🕒
+          </span>
+        ) : null}
         <button
           type="button"
           className="kanban-card-delete"

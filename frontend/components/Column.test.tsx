@@ -5,9 +5,11 @@ import { DndContext } from "@dnd-kit/core";
 import { Column } from "@/components/Column";
 import type { Board } from "@/lib/types";
 
+const NOW = new Date().toISOString();
+
 const cards: Board["cards"] = {
-  "card-1": { id: "card-1", title: "First", details: "" },
-  "card-2": { id: "card-2", title: "Second", details: "" },
+  "card-1": { id: "card-1", title: "First", details: "", statusChangedAt: NOW },
+  "card-2": { id: "card-2", title: "Second", details: "", statusChangedAt: NOW },
 };
 
 const column = { id: "col-todo", title: "To Do", cardIds: ["card-1", "card-2"] };
@@ -22,6 +24,8 @@ function renderColumn(overrides: Partial<React.ComponentProps<typeof Column>> = 
       <Column
         column={column}
         cards={cards}
+        staleCardDays={5}
+        columnCardLimit={6}
         onRename={onRename}
         onAddCard={onAddCard}
         onDeleteCard={onDeleteCard}
@@ -49,6 +53,8 @@ describe("Column", () => {
         <Column
           column={{ id: "col-todo", title: "To Do", cardIds: ["card-1", "missing"] }}
           cards={cards}
+          staleCardDays={5}
+          columnCardLimit={6}
           onRename={vi.fn()}
           onAddCard={vi.fn()}
           onDeleteCard={vi.fn()}
@@ -90,5 +96,34 @@ describe("Column", () => {
     await user.click(screen.getByRole("button", { name: "Add card" }));
 
     expect(onAddCard).toHaveBeenCalledWith("Third", "");
+  });
+
+  it("does not show an overloaded badge under the limit", () => {
+    renderColumn({ columnCardLimit: 6 });
+
+    expect(screen.queryByLabelText("To Do is overloaded")).not.toBeInTheDocument();
+  });
+
+  it("shows an overloaded badge once the card count exceeds the limit", () => {
+    renderColumn({ columnCardLimit: 1 });
+
+    expect(screen.getByLabelText("To Do is overloaded")).toBeInTheDocument();
+  });
+
+  it("marks a card as stale once it has aged past the threshold", () => {
+    const staleCards: Board["cards"] = {
+      "card-1": {
+        id: "card-1",
+        title: "First",
+        details: "",
+        statusChangedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      "card-2": cards["card-2"],
+    };
+
+    renderColumn({ cards: staleCards, staleCardDays: 5 });
+
+    expect(screen.getByLabelText("First is stale")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Second is stale")).not.toBeInTheDocument();
   });
 });

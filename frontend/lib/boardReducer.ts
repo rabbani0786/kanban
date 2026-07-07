@@ -47,6 +47,7 @@ export function boardReducer(state: Board, action: BoardAction): Board {
     case "DELETE_CARD": {
       const { [action.cardId]: _removed, ...remainingCards } = state.cards;
       return {
+        ...state,
         cards: remainingCards,
         columns: removeCardFromColumn(
           state.columns,
@@ -73,9 +74,12 @@ export function boardReducer(state: Board, action: BoardAction): Board {
         return state;
       }
 
+      const cards = { ...state.cards, [action.cardId]: action.card };
+
       if (action.fromColumnId === action.toColumnId) {
         return {
           ...state,
+          cards,
           columns: state.columns.map((column) =>
             column.id === action.fromColumnId
               ? {
@@ -100,6 +104,7 @@ export function boardReducer(state: Board, action: BoardAction): Board {
 
       return {
         ...state,
+        cards,
         columns: state.columns.map((column) => {
           if (column.id === action.fromColumnId) {
             return {

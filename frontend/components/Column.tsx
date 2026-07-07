@@ -6,6 +6,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import type { Board, Column as ColumnType } from "@/lib/types";
+import { isCardStale, isColumnOverloaded } from "@/lib/alerts";
 import { AddCardForm } from "./AddCardForm";
 import { EditableColumnTitle } from "./EditableColumnTitle";
 import { KanbanCard } from "./KanbanCard";
@@ -13,6 +14,8 @@ import { KanbanCard } from "./KanbanCard";
 type ColumnProps = {
   column: ColumnType;
   cards: Board["cards"];
+  staleCardDays: number;
+  columnCardLimit: number;
   onRename: (title: string) => void;
   onAddCard: (title: string, details: string) => void;
   onDeleteCard: (cardId: string) => void;
@@ -21,11 +24,14 @@ type ColumnProps = {
 export function Column({
   column,
   cards,
+  staleCardDays,
+  columnCardLimit,
   onRename,
   onAddCard,
   onDeleteCard,
 }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
+  const overloaded = isColumnOverloaded(column.cardIds.length, columnCardLimit);
 
   return (
     <section
@@ -34,6 +40,16 @@ export function Column({
     >
       <header className="kanban-column-header">
         <EditableColumnTitle title={column.title} onRename={onRename} />
+        {overloaded ? (
+          <span
+            className="kanban-column-overloaded"
+            role="img"
+            aria-label={`${column.title} is overloaded`}
+            title={`Overloaded: more than ${columnCardLimit} cards`}
+          >
+            ⚠
+          </span>
+        ) : null}
         <span className="kanban-column-count">{column.cardIds.length}</span>
       </header>
 
@@ -52,6 +68,7 @@ export function Column({
               <KanbanCard
                 key={card.id}
                 card={card}
+                isStale={isCardStale(card.statusChangedAt, staleCardDays)}
                 onDelete={() => onDeleteCard(card.id)}
               />
             );

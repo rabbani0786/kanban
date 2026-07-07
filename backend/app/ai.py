@@ -175,3 +175,32 @@ def run_chat(session: Session, user_message: str) -> str:
         messages.append({"role": "user", "content": tool_results})
 
     return "I made some changes but ran out of steps before finishing. Please check the board."
+
+
+ADVICE_SYSTEM_PROMPT = (
+    "You are a workflow advisor for a Kanban board. Given a list of current "
+    "bottlenecks (stale cards and overloaded columns), give a short, concrete "
+    "recommendation in 2-4 sentences on what to do about them. Reference card and "
+    "column titles by name. If there are no bottlenecks, say the board looks healthy."
+)
+
+
+def generate_bottleneck_advice(bottleneck_messages: list[str]) -> str:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise AIConfigurationError("ANTHROPIC_API_KEY is not configured.")
+
+    if bottleneck_messages:
+        user_content = "Current bottlenecks:\n" + "\n".join(
+            f"- {message}" for message in bottleneck_messages
+        )
+    else:
+        user_content = "There are currently no bottlenecks on the board."
+
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=ADVICE_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_content}],
+    )
+    return "".join(block.text for block in response.content if block.type == "text")

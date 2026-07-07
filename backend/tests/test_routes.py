@@ -1,7 +1,11 @@
+from datetime import datetime, timedelta
+
 import anthropic
 
 from app import routes
 from app.ai import AIConfigurationError
+from app.config import COLUMN_CARD_LIMIT, STALE_CARD_DAYS
+from app.models import Card
 
 
 def test_chat_maps_a_missing_api_key_to_502(client, monkeypatch):
@@ -304,3 +308,154 @@ def test_rename_column_to_a_duplicate_name_is_allowed(client):
     board_after = client.get("/board").json()
     assert board_after["columns"][1]["title"] == done_title
     assert board_after["columns"][4]["title"] == done_title
+
+
+def test_board_exposes_configured_thresholds(client):
+    board = client.get("/board").json()
+
+    assert board["staleCardDays"] == STALE_CARD_DAYS
+    assert board["columnCardLimit"] == COLUMN_CARD_LIMIT
+    assert board["bottlenecks"] == []
+
+
+def test_fresh_card_is_not_stale(client):
+    board = client.get("/board").json()
+    card_id = next(iter(board["cards"]))
+
+    assert board["cards"][card_id]["isStale"] is False
+
+
+def test_card_older_than_threshold_is_flagged_stale_and_listed_as_a_bottleneck(
+    client, session
+):
+    board = client.get("/board").json()
+    card_id = next(iter(board["cards"]))
+    column_id = board["columns"][0]["id"]
+
+    card = session.get(Card, card_id)
+    card.status_changed_at = datetime.utcnow() - timedelta(days=STALE_CARD_DAYS + 1)
+    session.add(card)
+    session.commit()
+
+    board_after = client.get("/board").json()
+
+    assert board_after["cards"][card_id]["isStale"] is True
+    stale_entries = [
+        b
+        for b in board_after["bottlenecks"]
+        if b["type"] == "stale_card" and b["cardId"] == card_id
+    ]
+    assert len(stale_entries) == 1
+    assert stale_entries[0]["columnId"] == column_id
+
+
+def test_column_over_limit_is_flagged_overloaded_and_listed_as_a_bottleneck(client):
+    board = client.get("/board").json()
+    column_id = board["columns"][0]["id"]
+
+    starting_count = len(board["columns"][0]["cardIds"])
+    for i in range(COLUMN_CARD_LIMIT - starting_count + 1):
+        response = client.post(f"/columns/{column_id}/cards", json={"title": f"Extra {i}"})
+        assert response.status_code == 201
+
+    board_after = client.get("/board").json()
+    backlog = board_after["columns"][0]
+
+    assert backlog["isOverloaded"] is True
+    overloaded_entries = [
+        b
+        for b in board_after["bottlenecks"]
+        if b["type"] == "overloaded_column" and b["columnId"] == column_id
+    ]
+    assert len(overloaded_entries) == 1
+
+
+def test_moving_a_stale_card_to_another_column_clears_its_staleness(client, session):
+    board = client.get("/board").json()
+    card_id = board["columns"][0]["cardIds"][0]
+    done_id = board["columns"][4]["id"]
+
+    card = session.get(Card, card_id)
+    card.status_changed_at = datetime.utcnow() - timedelta(days=STALE_CARD_DAYS + 1)
+    session.add(card)
+    session.commit()
+
+    response = client.post(f"/cards/{card_id}/move", json={"toColumnId": done_id, "toIndex": 0})
+
+    assert response.status_code == 200
+    assert response.json()["isStale"] is False
+
+
+def test_bottleneck_advice_maps_a_missing_api_key_to_502(client, monkeypatch):
+    def raise_error(bottleneck_messages):
+        raise AIConfigurationError("ANTHROPIC_API_KEY is not configured.")
+
+    monkeypatch.setattr(routes, "generate_bottleneck_advice", raise_error)
+
+    response = client.post("/bottlenecks/advice")
+
+    assert response.status_code == 502
+    assert "ANTHROPIC_API_KEY" in response.json()["detail"]
+
+
+def test_bottleneck_advice_maps_an_anthropic_error_to_502(client, monkeypatch):
+    def raise_error(bottleneck_messages):
+        raise anthropic.AnthropicError("no api key configured")
+
+    monkeypatch.setattr(routes, "generate_bottleneck_advice", raise_error)
+
+    response = client.post("/bottlenecks/advice")
+
+    assert response.status_code == 502
+
+
+def test_bottleneck_advice_returns_the_model_reply(client, monkeypatch):
+    monkeypatch.setattr(routes, "generate_bottleneck_advice", lambda bottleneck_messages: "Looks healthy.")
+
+    response = client.post("/bottlenecks/advice")
+
+    assert response.status_code == 200
+    assert response.json() == {"advice": "Looks healthy."}
+
+
+def test_bottleneck_advice_is_given_the_current_bottleneck_messages(client, session, monkeypatch):
+    board = client.get("/board").json()
+    card_id = board["columns"][0]["cardIds"][0]
+
+    card = session.get(Card, card_id)
+    card.status_changed_at = datetime.utcnow() - timedelta(days=STALE_CARD_DAYS + 1)
+    session.add(card)
+    session.commit()
+
+    received = {}
+
+    def fake_advice(bottleneck_messages):
+        received["messages"] = bottleneck_messages
+        return "Advice"
+
+    monkeypatch.setattr(routes, "generate_bottleneck_advice", fake_advice)
+
+    response = client.post("/bottlenecks/advice")
+
+    assert response.status_code == 200
+    assert len(received["messages"]) == 1
+    assert "days" in received["messages"][0]
+
+
+def test_reordering_within_the_same_column_does_not_reset_staleness(client, session):
+    board = client.get("/board").json()
+    backlog_id = board["columns"][0]["id"]
+    first_card, second_card = board["columns"][0]["cardIds"]
+
+    stale_since = datetime.utcnow() - timedelta(days=STALE_CARD_DAYS + 1)
+    card = session.get(Card, first_card)
+    card.status_changed_at = stale_since
+    session.add(card)
+    session.commit()
+
+    response = client.post(
+        f"/cards/{first_card}/move", json={"toColumnId": backlog_id, "toIndex": 1}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["isStale"] is True

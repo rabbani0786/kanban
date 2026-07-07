@@ -7,7 +7,12 @@ describe("KanbanCard", () => {
   it("renders the title and details", () => {
     render(
       <KanbanCard
-        card={{ id: "card-1", title: "Ship MVP", details: "Launch it" }}
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "Launch it",
+          statusChangedAt: new Date().toISOString(),
+        }}
         onDelete={vi.fn()}
       />
     );
@@ -18,10 +23,51 @@ describe("KanbanCard", () => {
 
   it("omits the details paragraph when details are empty", () => {
     render(
-      <KanbanCard card={{ id: "card-1", title: "Ship MVP", details: "" }} onDelete={vi.fn()} />
+      <KanbanCard
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "",
+          statusChangedAt: new Date().toISOString(),
+        }}
+        onDelete={vi.fn()}
+      />
     );
 
     expect(screen.queryByText("Launch it")).not.toBeInTheDocument();
+  });
+
+  it("does not show a stale badge by default", () => {
+    render(
+      <KanbanCard
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "",
+          statusChangedAt: new Date().toISOString(),
+        }}
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByLabelText("Ship MVP is stale")).not.toBeInTheDocument();
+  });
+
+  it("shows a stale badge when isStale is true", () => {
+    render(
+      <KanbanCard
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "",
+          statusChangedAt: new Date().toISOString(),
+        }}
+        isStale
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText("Ship MVP is stale")).toBeInTheDocument();
   });
 
   it("calls onDelete when the delete button is clicked", async () => {
@@ -30,7 +76,12 @@ describe("KanbanCard", () => {
 
     render(
       <KanbanCard
-        card={{ id: "card-1", title: "Ship MVP", details: "Launch it" }}
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "Launch it",
+          statusChangedAt: new Date().toISOString(),
+        }}
         onDelete={onDelete}
       />
     );

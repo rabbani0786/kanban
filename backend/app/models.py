@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -50,5 +51,6 @@ class Card(SQLModel, table=True):
     title: str
     details: str = ""
     position: int
+    status_changed_at: datetime = Field(default_factory=datetime.utcnow)
 
     column: Column = Relationship(back_populates="cards")

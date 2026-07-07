@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 
@@ -17,17 +20,32 @@ class CardOut(CamelModel):
     id: str
     title: str
     details: str
+    status_changed_at: datetime
+    is_stale: bool
 
 
 class ColumnOut(CamelModel):
     id: str
     title: str
     card_ids: list[str]
+    is_overloaded: bool
+
+
+class BottleneckOut(CamelModel):
+    type: Literal["stale_card", "overloaded_column"]
+    column_id: str
+    column_title: str
+    card_id: str | None = None
+    card_title: str | None = None
+    message: str
 
 
 class BoardOut(CamelModel):
     columns: list[ColumnOut]
     cards: dict[str, CardOut]
+    bottlenecks: list[BottleneckOut]
+    stale_card_days: float
+    column_card_limit: int
 
 
 class RenameColumnRequest(CamelModel):
@@ -75,3 +93,7 @@ class ChatRequest(CamelModel):
 
 class ChatResponse(CamelModel):
     reply: str
+
+
+class BottleneckAdviceResponse(CamelModel):
+    advice: str

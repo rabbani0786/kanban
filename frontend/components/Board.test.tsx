@@ -65,6 +65,7 @@ afterEach(() => {
   vi.mocked(api.deleteCard).mockReset();
   vi.mocked(api.moveCard).mockReset();
   vi.mocked(api.sendChatMessage).mockReset();
+  vi.mocked(api.getBottleneckAdvice).mockReset();
 });
 
 describe("Board loading", () => {
@@ -140,6 +141,7 @@ describe("Adding a card", () => {
       id: "card-new",
       title: "New task",
       details: "",
+      statusChangedAt: new Date().toISOString(),
     });
     await renderLoadedBoard();
 
@@ -251,6 +253,7 @@ describe("Dragging a card", () => {
       id: "card-1",
       title: "Research competitors",
       details: "Review top 5 Kanban apps and note UX patterns.",
+      statusChangedAt: new Date().toISOString(),
     });
     await renderLoadedBoard();
 
@@ -303,6 +306,7 @@ describe("AI chat", () => {
       id: "card-new",
       title: "Added by AI",
       details: "",
+      statusChangedAt: new Date().toISOString(),
     };
     updatedBoard.columns[0].cardIds.push("card-new");
 
@@ -315,5 +319,28 @@ describe("AI chat", () => {
     expect(api.sendChatMessage).toHaveBeenCalledWith("Add a card called Added by AI");
     expect(await screen.findByText("Added the card.")).toBeInTheDocument();
     expect(await screen.findByText("Added by AI")).toBeInTheDocument();
+  });
+});
+
+describe("Bottleneck advice", () => {
+  it("fetches and shows advice when the button is clicked", async () => {
+    const user = userEvent.setup();
+    const boardWithBottleneck = structuredClone(initialBoard);
+    boardWithBottleneck.cards["card-1"].statusChangedAt = new Date(
+      Date.now() - 6 * 24 * 60 * 60 * 1000
+    ).toISOString();
+    vi.mocked(api.fetchBoard).mockResolvedValue(boardWithBottleneck);
+    vi.mocked(api.getBottleneckAdvice).mockResolvedValue({
+      advice: "Prioritize Research competitors today.",
+    });
+    render(<Board />);
+    await screen.findByTestId("column-col-backlog");
+
+    await user.click(screen.getByRole("button", { name: "Get AI advice" }));
+
+    expect(api.getBottleneckAdvice).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText("Prioritize Research competitors today.")
+    ).toBeInTheDocument();
   });
 });
