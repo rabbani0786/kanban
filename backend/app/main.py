@@ -25,7 +25,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(title="Kanban API", lifespan=lifespan)
 
-_default_allowed_origins = ["http://localhost:3000", "http://localhost:3100"]
+_default_allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3100",
+    "https://kanban-ai-zeta.vercel.app",
+]
 _allowed_origins_env = os.environ.get("ALLOWED_ORIGINS")
 allowed_origins = (
     [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()]
