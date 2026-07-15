@@ -1,6 +1,12 @@
+import os
+
 from sqlmodel import Session, select
 
+from app.auth import hash_password
 from app.models import Board, Card, Column, User
+
+DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "user")
+DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "password")
 
 COLUMN_TITLES = ["Backlog", "To Do", "In Progress", "Review", "Done"]
 
@@ -29,15 +35,19 @@ CARDS_BY_COLUMN = [
 
 
 def seed_if_empty(session: Session) -> None:
-    existing_user = session.exec(select(User).where(User.username == "user")).first()
+    existing_user = session.exec(select(User).where(User.username == DEMO_USERNAME)).first()
     if existing_user is not None:
+        if not existing_user.password_hash:
+            existing_user.password_hash = hash_password(DEMO_PASSWORD)
+            session.add(existing_user)
+            session.commit()
         return
 
-    user = User(username="user")
+    user = User(username=DEMO_USERNAME, password_hash=hash_password(DEMO_PASSWORD))
     session.add(user)
     session.flush()
 
-    board = Board(user_id=user.id)
+    board = Board(user_id=user.id, name="My Board")
     session.add(board)
     session.flush()
 

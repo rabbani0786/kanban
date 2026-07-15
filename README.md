@@ -1,6 +1,6 @@
 # Kanban Project Manager
 
-A single-board Kanban app with drag-and-drop, a Python backend, SQLite persistence, and an AI assistant that creates, edits, and moves cards from natural-language instructions.
+A multi-board Kanban project management app with real user accounts, drag-and-drop, a Python backend, SQLite persistence, and an AI assistant that creates, edits, and moves cards from natural-language instructions.
 
 ## Stack
 
@@ -23,7 +23,7 @@ docker compose up --build
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
 
-Sign in with username `user` and password `password`. Everything works without `ANTHROPIC_API_KEY` set except the AI assistant, which will show a clear error if used.
+Sign in with the seeded demo account (username `user`, password `password`), or register a new account of your own. Everything works without `ANTHROPIC_API_KEY` set except the AI assistant, which will show a clear error if used.
 
 ### Local development (without Docker)
 
@@ -47,13 +47,15 @@ Open http://localhost:3000.
 
 ## Features
 
-- One board with five renameable columns
-- Cards with a title and details
-- Drag and drop between columns
+- Real user accounts: register, sign in/out, passwords hashed (never stored in plain text)
+- Each user can have any number of boards: create, rename, switch between, and delete boards
+- Every board has five renameable columns
+- Cards have a title, details, priority (low/medium/high), and an optional due date
+- Search and filter cards by text and priority
+- Drag and drop between columns (disabled while a filter is active, so positions stay consistent)
 - Add and delete cards
 - Data persists in SQLite across restarts
-- Sign-in (hardcoded credentials for this MVP)
-- AI assistant in the sidebar: create, edit, and move cards from natural language
+- AI assistant in the sidebar, scoped to the board you're viewing: create, edit, and move cards from natural language
 
 ## Tests
 

@@ -2,15 +2,30 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Card } from "@/lib/types";
+import type { Card, Priority } from "@/lib/types";
 
 type KanbanCardProps = {
   card: Card;
   isStale?: boolean;
   onDelete: () => void;
+  onPriorityChange: (priority: Priority) => void;
+  onDueDateChange: (dueDate: string | null) => void;
 };
 
-export function KanbanCard({ card, isStale = false, onDelete }: KanbanCardProps) {
+function formatDueDate(dueDate: string): string {
+  return new Date(dueDate).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function KanbanCard({
+  card,
+  isStale = false,
+  onDelete,
+  onPriorityChange,
+  onDueDateChange,
+}: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -67,6 +82,39 @@ export function KanbanCard({ card, isStale = false, onDelete }: KanbanCardProps)
       {card.details ? (
         <p className="kanban-card-details">{card.details}</p>
       ) : null}
+      <div className="kanban-card-footer">
+        <select
+          className={`kanban-card-priority kanban-card-priority-${card.priority}`}
+          value={card.priority}
+          aria-label={`Priority for ${card.title}`}
+          onChange={(event) => onPriorityChange(event.target.value as Priority)}
+        >
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        {card.dueDate ? (
+          <span className="kanban-card-due-date">
+            Due {formatDueDate(card.dueDate)}
+            <button
+              type="button"
+              className="kanban-card-due-date-clear"
+              aria-label={`Clear due date for ${card.title}`}
+              onClick={() => onDueDateChange(null)}
+            >
+              ×
+            </button>
+          </span>
+        ) : (
+          <input
+            type="date"
+            className="kanban-card-due-date-input"
+            aria-label={`Set due date for ${card.title}`}
+            value=""
+            onChange={(event) => onDueDateChange(event.target.value || null)}
+          />
+        )}
+      </div>
     </article>
   );
 }

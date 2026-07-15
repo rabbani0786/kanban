@@ -5,7 +5,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { Board, Column as ColumnType } from "@/lib/types";
+import type { Board, Column as ColumnType, Priority } from "@/lib/types";
 import { isCardStale, isColumnOverloaded } from "@/lib/alerts";
 import { AddCardForm } from "./AddCardForm";
 import { EditableColumnTitle } from "./EditableColumnTitle";
@@ -13,22 +13,33 @@ import { KanbanCard } from "./KanbanCard";
 
 type ColumnProps = {
   column: ColumnType;
+  visibleCardIds: string[];
   cards: Board["cards"];
   staleCardDays: number;
   columnCardLimit: number;
   onRename: (title: string) => void;
-  onAddCard: (title: string, details: string) => void;
+  onAddCard: (
+    title: string,
+    details: string,
+    priority: Priority,
+    dueDate: string | null
+  ) => void;
   onDeleteCard: (cardId: string) => void;
+  onCardPriorityChange: (cardId: string, priority: Priority) => void;
+  onCardDueDateChange: (cardId: string, dueDate: string | null) => void;
 };
 
 export function Column({
   column,
+  visibleCardIds,
   cards,
   staleCardDays,
   columnCardLimit,
   onRename,
   onAddCard,
   onDeleteCard,
+  onCardPriorityChange,
+  onCardDueDateChange,
 }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const overloaded = isColumnOverloaded(column.cardIds.length, columnCardLimit);
@@ -50,15 +61,15 @@ export function Column({
             ⚠
           </span>
         ) : null}
-        <span className="kanban-column-count">{column.cardIds.length}</span>
+        <span className="kanban-column-count">{visibleCardIds.length}</span>
       </header>
 
       <div ref={setNodeRef} className="kanban-column-body">
         <SortableContext
-          items={column.cardIds}
+          items={visibleCardIds}
           strategy={verticalListSortingStrategy}
         >
-          {column.cardIds.map((cardId) => {
+          {visibleCardIds.map((cardId) => {
             const card = cards[cardId];
             if (!card) {
               return null;
@@ -70,6 +81,8 @@ export function Column({
                 card={card}
                 isStale={isCardStale(card.statusChangedAt, staleCardDays)}
                 onDelete={() => onDeleteCard(card.id)}
+                onPriorityChange={(priority) => onCardPriorityChange(card.id, priority)}
+                onDueDateChange={(dueDate) => onCardDueDateChange(card.id, dueDate)}
               />
             );
           })}

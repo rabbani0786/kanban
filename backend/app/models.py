@@ -13,19 +13,35 @@ class User(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     username: str = Field(unique=True, index=True)
+    password_hash: str = ""
 
-    board: "Board" = Relationship(back_populates="user")
+    boards: list["Board"] = Relationship(back_populates="user")
+
+
+class AuthToken(SQLModel, table=True):
+    __tablename__ = "auth_tokens"
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    token: str = Field(unique=True, index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Board(SQLModel, table=True):
     __tablename__ = "boards"
 
     id: int | None = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", unique=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    name: str = "My Board"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    user: User = Relationship(back_populates="board")
+    user: User = Relationship(back_populates="boards")
     columns: list["Column"] = Relationship(
-        back_populates="board", sa_relationship_kwargs={"order_by": "Column.position"}
+        back_populates="board",
+        sa_relationship_kwargs={
+            "order_by": "Column.position",
+            "cascade": "all, delete-orphan",
+        },
     )
 
 
@@ -39,7 +55,11 @@ class Column(SQLModel, table=True):
 
     board: Board = Relationship(back_populates="columns")
     cards: list["Card"] = Relationship(
-        back_populates="column", sa_relationship_kwargs={"order_by": "Card.position"}
+        back_populates="column",
+        sa_relationship_kwargs={
+            "order_by": "Card.position",
+            "cascade": "all, delete-orphan",
+        },
     )
 
 
@@ -50,6 +70,8 @@ class Card(SQLModel, table=True):
     column_id: str = Field(foreign_key="columns.id", index=True)
     title: str
     details: str = ""
+    priority: str = "medium"
+    due_date: datetime | None = None
     position: int
     status_changed_at: datetime = Field(default_factory=datetime.utcnow)
 

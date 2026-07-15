@@ -1,22 +1,32 @@
-const SESSION_KEY = "kanban-session";
-const VALID_USERNAME = "user";
-const VALID_PASSWORD = "password";
-
-export function checkCredentials(username: string, password: string): boolean {
-  return username === VALID_USERNAME && password === VALID_PASSWORD;
-}
+import {
+  clearAuth,
+  getStoredUsername,
+  getToken,
+  login as apiLogin,
+  logout as apiLogout,
+  register as apiRegister,
+} from "./api";
 
 export function hasStoredSession(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return sessionStorage.getItem(SESSION_KEY) === "true";
+  return getToken() !== null;
 }
 
-export function storeSession(): void {
-  sessionStorage.setItem(SESSION_KEY, "true");
+export function currentUsername(): string | null {
+  return getStoredUsername();
+}
+
+export async function login(username: string, password: string): Promise<void> {
+  await apiLogin(username, password);
+}
+
+export async function register(username: string, password: string): Promise<void> {
+  await apiRegister(username, password);
+}
+
+export async function logout(): Promise<void> {
+  await apiLogout();
 }
 
 export function clearSession(): void {
-  sessionStorage.removeItem(SESSION_KEY);
+  clearAuth();
 }

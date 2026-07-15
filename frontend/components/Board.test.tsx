@@ -54,7 +54,7 @@ function dragEvent(activeId: string, overId: string | null) {
 
 async function renderLoadedBoard() {
   vi.mocked(api.fetchBoard).mockResolvedValue(structuredClone(initialBoard));
-  render(<Board />);
+  render(<Board boardId={1} />);
   await screen.findByTestId("column-col-backlog");
 }
 
@@ -65,15 +65,22 @@ afterEach(() => {
   vi.mocked(api.deleteCard).mockReset();
   vi.mocked(api.moveCard).mockReset();
   vi.mocked(api.sendChatMessage).mockReset();
+  vi.mocked(api.updateCard).mockReset();
 });
 
 describe("Board loading", () => {
   it("shows a loading state before the board resolves", () => {
     vi.mocked(api.fetchBoard).mockReturnValue(new Promise(() => {}));
 
-    render(<Board />);
+    render(<Board boardId={1} />);
 
     expect(screen.getByText("Loading board…")).toBeInTheDocument();
+  });
+
+  it("fetches the board for the given boardId", async () => {
+    await renderLoadedBoard();
+
+    expect(api.fetchBoard).toHaveBeenCalledWith(1);
   });
 
   it("renders all five columns once the board loads", async () => {
@@ -89,7 +96,7 @@ describe("Board loading", () => {
   it("shows an error when the board fails to load", async () => {
     vi.mocked(api.fetchBoard).mockRejectedValue(new Error("network down"));
 
-    render(<Board />);
+    render(<Board boardId={1} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Could not load the board. Is the backend running?"
@@ -112,7 +119,7 @@ describe("Renaming a column", () => {
     await user.clear(input);
     await user.type(input, "Ready{Enter}");
 
-    expect(api.renameColumn).toHaveBeenCalledWith("col-todo", "Ready");
+    expect(api.renameColumn).toHaveBeenCalledWith(1, "col-todo", "Ready");
     expect(screen.getByRole("button", { name: "Rename column Ready" })).toBeInTheDocument();
   });
 
@@ -140,6 +147,8 @@ describe("Adding a card", () => {
       id: "card-new",
       title: "New task",
       details: "",
+      priority: "medium",
+      dueDate: null,
       statusChangedAt: new Date().toISOString(),
     });
     await renderLoadedBoard();
@@ -149,7 +158,7 @@ describe("Adding a card", () => {
     await user.type(within(backlog).getByLabelText("Card title"), "New task");
     await user.click(within(backlog).getByRole("button", { name: "Add card" }));
 
-    expect(api.createCard).toHaveBeenCalledWith("col-backlog", "New task", "");
+    expect(api.createCard).toHaveBeenCalledWith(1, "col-backlog", "New task", "", "medium", null);
     expect(within(backlog).getByText("New task")).toBeInTheDocument();
   });
 
@@ -178,7 +187,7 @@ describe("Deleting a card", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete card Research competitors" }));
 
-    expect(api.deleteCard).toHaveBeenCalledWith("card-1");
+    expect(api.deleteCard).toHaveBeenCalledWith(1, "card-1");
     expect(screen.queryByText("Research competitors")).not.toBeInTheDocument();
   });
 
@@ -193,6 +202,92 @@ describe("Deleting a card", () => {
       "Could not delete the card. Please try again."
     );
     expect(screen.getByText("Research competitors")).toBeInTheDocument();
+  });
+});
+
+describe("Editing a card's priority and due date", () => {
+  it("updates the priority when the API call succeeds", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateCard).mockResolvedValue({
+      ...initialBoard.cards["card-1"],
+      priority: "high",
+    });
+    await renderLoadedBoard();
+
+    await user.selectOptions(
+      screen.getByLabelText("Priority for Research competitors"),
+      "high"
+    );
+
+    expect(api.updateCard).toHaveBeenCalledWith(1, "card-1", { priority: "high" });
+  });
+
+  it("shows an error when updating the priority fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateCard).mockRejectedValue(new Error("boom"));
+    await renderLoadedBoard();
+
+    await user.selectOptions(
+      screen.getByLabelText("Priority for Research competitors"),
+      "high"
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not update the card's priority. Please try again."
+    );
+  });
+
+  it("sets a due date when the API call succeeds", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateCard).mockResolvedValue({
+      ...initialBoard.cards["card-1"],
+      dueDate: "2026-08-01T00:00:00.000Z",
+    });
+    await renderLoadedBoard();
+
+    await user.type(screen.getByLabelText("Set due date for Research competitors"), "2026-08-01");
+
+    expect(api.updateCard).toHaveBeenCalledWith(1, "card-1", {
+      dueDate: "2026-08-01",
+      clearDueDate: false,
+    });
+  });
+});
+
+describe("Filtering cards", () => {
+  it("hides non-matching cards when searching", async () => {
+    const user = userEvent.setup();
+    await renderLoadedBoard();
+
+    await user.type(screen.getByLabelText("Search cards"), "Research");
+
+    expect(screen.getByText("Research competitors")).toBeInTheDocument();
+    expect(screen.queryByText("Define color palette")).not.toBeInTheDocument();
+  });
+
+  it("filters cards by priority", async () => {
+    const user = userEvent.setup();
+    const highPriorityBoard = structuredClone(initialBoard);
+    highPriorityBoard.cards["card-1"].priority = "high";
+    vi.mocked(api.fetchBoard).mockResolvedValue(highPriorityBoard);
+    render(<Board boardId={1} />);
+    await screen.findByTestId("column-col-backlog");
+
+    await user.selectOptions(screen.getByLabelText("Filter by priority"), "high");
+
+    expect(screen.getByText("Research competitors")).toBeInTheDocument();
+    expect(screen.queryByText("Define color palette")).not.toBeInTheDocument();
+  });
+
+  it("shows a note that drag-and-drop is disabled while filtering", async () => {
+    const user = userEvent.setup();
+    await renderLoadedBoard();
+
+    await user.type(screen.getByLabelText("Search cards"), "Research");
+
+    expect(
+      screen.getByText("Drag-and-drop is disabled while filtering.")
+    ).toBeInTheDocument();
   });
 });
 
@@ -252,6 +347,8 @@ describe("Dragging a card", () => {
       id: "card-1",
       title: "Research competitors",
       details: "Review top 5 Kanban apps and note UX patterns.",
+      priority: "medium",
+      dueDate: null,
       statusChangedAt: new Date().toISOString(),
     });
     await renderLoadedBoard();
@@ -260,7 +357,7 @@ describe("Dragging a card", () => {
       await handlers.onDragEnd(dragEvent("card-1", "col-done"));
     });
 
-    expect(api.moveCard).toHaveBeenCalledWith("card-1", "col-done", 2);
+    expect(api.moveCard).toHaveBeenCalledWith(1, "card-1", "col-done", 2);
     await waitFor(() => {
       expect(
         within(screen.getByTestId("column-col-done")).getByText("Research competitors")
@@ -296,7 +393,7 @@ describe("AI chat", () => {
     expect(screen.getByLabelText("Chat message")).toBeInTheDocument();
   });
 
-  it("sends a chat message and refreshes the board with the AI's changes", async () => {
+  it("sends a chat message scoped to the board and refreshes with the AI's changes", async () => {
     const user = userEvent.setup();
     await renderLoadedBoard();
 
@@ -305,6 +402,8 @@ describe("AI chat", () => {
       id: "card-new",
       title: "Added by AI",
       details: "",
+      priority: "medium",
+      dueDate: null,
       statusChangedAt: new Date().toISOString(),
     };
     updatedBoard.columns[0].cardIds.push("card-new");
@@ -315,7 +414,7 @@ describe("AI chat", () => {
     await user.type(screen.getByLabelText("Chat message"), "Add a card called Added by AI");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(api.sendChatMessage).toHaveBeenCalledWith("Add a card called Added by AI");
+    expect(api.sendChatMessage).toHaveBeenCalledWith(1, "Add a card called Added by AI");
     expect(await screen.findByText("Added the card.")).toBeInTheDocument();
     expect(await screen.findByText("Added by AI")).toBeInTheDocument();
   });

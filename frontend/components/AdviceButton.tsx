@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { getBottleneckAdvice } from "@/lib/api";
 
-export function AdviceButton() {
+type AdviceButtonProps = {
+  boardId: number;
+};
+
+export function AdviceButton({ boardId }: AdviceButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [advice, setAdvice] = useState("");
@@ -14,7 +18,7 @@ export function AdviceButton() {
     setIsLoading(true);
     setError("");
     try {
-      const { advice } = await getBottleneckAdvice();
+      const { advice } = await getBottleneckAdvice(boardId);
       setAdvice(advice);
     } catch {
       setError("Could not get AI advice. Please try again.");

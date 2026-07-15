@@ -4,7 +4,7 @@ import pytest
 from sqlmodel import select
 
 from app import ai
-from app.models import Card
+from app.models import Board, Card
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("ANTHROPIC_API_KEY"),
@@ -13,8 +13,9 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_live_create_card_instruction_end_to_end(session):
+    board_id = session.exec(select(Board)).first().id
     reply = ai.run_chat(
-        session, "Please add a card called 'Live test card' to the Backlog column."
+        session, board_id, "Please add a card called 'Live test card' to the Backlog column."
     )
 
     assert isinstance(reply, str) and reply.strip()

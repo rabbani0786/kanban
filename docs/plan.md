@@ -102,3 +102,17 @@ Update the README to reflect the finished full-stack app. Optionally write a Lin
 **Success criteria**
 - [x] README accurately describes setup (`docker-compose up`), features, and stack
 - [x] No README references to the old dummy-data-only frontend demo
+
+## Part 11 — Real user accounts and multi-board support
+
+Replace the hardcoded single-user sign-in with real accounts (register/login/logout, hashed passwords, session tokens), and let each user own any number of boards instead of exactly one. Add card priority and an optional due date, plus a search/filter bar. Out of scope: sharing a board between multiple users, real-time collaboration, email verification/password reset.
+
+**Success criteria**
+- [x] `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me` — passwords hashed (PBKDF2 + per-user salt), opaque bearer tokens, no plaintext passwords stored or logged
+- [x] Every board/column/card route requires authentication and is scoped to a `board_id`; a user can never read or mutate another user's board (returns 404, verified by dedicated cross-user tests, not just hidden client-side)
+- [x] Users can create, rename, delete, and switch between boards from the UI; a new board starts with the standard five empty columns
+- [x] Cards support `priority` (low/medium/high) and an optional `due_date`, editable inline on the card
+- [x] A search/filter bar filters visible cards by text and priority; drag-and-drop is disabled while a filter is active so card positions can't desync from the unfiltered order
+- [x] Existing single-board/single-user SQLite databases upgrade automatically on startup (new columns backfilled, legacy `UNIQUE(boards.user_id)` constraint removed) without losing data
+- [x] Backend: 102 tests passing + 1 skipped (live AI test), ~97% coverage, including auth and cross-user ownership tests
+- [x] Frontend: 139 unit tests passing, ~95% coverage; 21 Playwright e2e tests passing (register, login, multi-board create/switch/rename/delete, priority/due-date editing, filtering, plus all prior CRUD/drag-drop/AI-chat coverage)

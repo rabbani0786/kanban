@@ -8,7 +8,14 @@ describe("CardPreview", () => {
   it("renders the card title and details", () => {
     render(
       <CardPreview
-        card={{ id: "card-1", title: "Ship MVP", details: "Launch it", statusChangedAt }}
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "Launch it",
+          priority: "medium",
+          dueDate: null,
+          statusChangedAt,
+        }}
       />
     );
 
@@ -18,10 +25,36 @@ describe("CardPreview", () => {
 
   it("omits the details paragraph when details are empty", () => {
     render(
-      <CardPreview card={{ id: "card-1", title: "Ship MVP", details: "", statusChangedAt }} />
+      <CardPreview
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "",
+          priority: "medium",
+          dueDate: null,
+          statusChangedAt,
+        }}
+      />
     );
 
     expect(screen.getByText("Ship MVP")).toBeInTheDocument();
     expect(screen.queryByText("Launch it")).not.toBeInTheDocument();
+  });
+
+  it("shows the card's priority badge", () => {
+    render(
+      <CardPreview
+        card={{
+          id: "card-1",
+          title: "Ship MVP",
+          details: "",
+          priority: "high",
+          dueDate: null,
+          statusChangedAt,
+        }}
+      />
+    );
+
+    expect(screen.getByText("high")).toBeInTheDocument();
   });
 });

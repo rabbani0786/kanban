@@ -22,7 +22,7 @@ There is a AI chat featre in the side bar;the AI should be able to create/edit/m
 Use SQLLite local database for the database, creating a new db if it doesn't exist.
 
 ## Current State
-The MVP is complete: frontend, backend, database, and AI assistant are all built, wired together, tested, and run via Docker. See `docs/plan.md` for the phase-by-phase build log and `README.md` for setup instructions.
+The MVP is complete, and has since been extended into a multi-user, multi-board project management app (real accounts, per-user boards, card priority/due date, search/filter). Frontend, backend, database, and AI assistant are all built, wired together, tested, and run via Docker. See `docs/plan.md` for the phase-by-phase build log and `README.md` for setup instructions.
 
 ## Color Scheme
 
@@ -45,7 +45,10 @@ The MVP is complete: frontend, backend, database, and AI assistant are all built
 2. Keep it simple - NEVER over-engineer, ALWAYS simplify, NO unnecessary defensive programming. No extra features - focus on simplicity.
 3. Be concise. Keep README minimal. IMPORTANT: no emojis ever
 
-## Limitations
+## Limitations (original MVP scope — superseded, kept for history)
 For the MVP , there will only be a user sign in (harcoded to 'user and 'password') but the data base will supoort multiple users for future.
 For the MVP, there will only 1 kaban board per signed in user.
 For the MVP , this will run locally (in a docker container)
+
+## Post-MVP: user management and multi-board (current state)
+Real user accounts (register/login/logout, hashed passwords, opaque session tokens) replaced the hardcoded sign-in. Each user can create, rename, delete, and switch between any number of boards; every board owns its own columns and cards, and one user can never read or modify another user's board (enforced server-side, not just hidden in the UI). Cards also gained a priority (low/medium/high) and an optional due date, plus a search/filter bar on the board. See `docs/status-summary.md` for what's tested and how to run everything.

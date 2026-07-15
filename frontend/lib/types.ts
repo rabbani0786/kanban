@@ -1,7 +1,11 @@
+export type Priority = "low" | "medium" | "high";
+
 export type Card = {
   id: string;
   title: string;
   details: string;
+  priority: Priority;
+  dueDate: string | null;
   statusChangedAt: string;
 };
 
@@ -21,6 +25,8 @@ export type Bottleneck = {
 };
 
 export type Board = {
+  id: number;
+  name: string;
   columns: Column[];
   cards: Record<string, Card>;
   bottlenecks: Bottleneck[];
@@ -28,9 +34,16 @@ export type Board = {
   columnCardLimit: number;
 };
 
+export type BoardSummary = {
+  id: number;
+  name: string;
+  createdAt: string;
+};
+
 export type BoardAction =
   | { type: "RENAME_COLUMN"; columnId: string; title: string }
   | { type: "ADD_CARD"; columnId: string; card: Card }
+  | { type: "UPDATE_CARD"; card: Card }
   | { type: "DELETE_CARD"; columnId: string; cardId: string }
   | {
       type: "MOVE_CARD";

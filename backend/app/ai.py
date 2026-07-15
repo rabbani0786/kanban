@@ -104,15 +104,15 @@ def _find_card(board: Board, title: str) -> Card | None:
     return None
 
 
-def _run_tool(session: Session, name: str, tool_input: dict) -> tuple[str, bool]:
-    board = crud.get_the_board(session)
+def _run_tool(session: Session, board_id: int, name: str, tool_input: dict) -> tuple[str, bool]:
+    board = crud.get_board(session, board_id)
 
     if name == "create_card":
         column = _find_column(board, tool_input["column_title"])
         if column is None:
             return f"No column titled '{tool_input['column_title']}' found.", True
         card = crud.create_card(
-            session, column.id, tool_input["title"], tool_input.get("details", "")
+            session, board_id, column.id, tool_input["title"], tool_input.get("details", "")
         )
         return f"Created card '{card.title}' in column '{column.title}'.", False
 
@@ -121,7 +121,11 @@ def _run_tool(session: Session, name: str, tool_input: dict) -> tuple[str, bool]
         if card is None:
             return f"No card titled '{tool_input['card_title']}' found.", True
         updated = crud.update_card(
-            session, card.id, tool_input.get("new_title"), tool_input.get("new_details")
+            session,
+            board_id,
+            card.id,
+            tool_input.get("new_title"),
+            tool_input.get("new_details"),
         )
         return f"Updated card '{updated.title}'.", False
 
@@ -132,13 +136,13 @@ def _run_tool(session: Session, name: str, tool_input: dict) -> tuple[str, bool]
         column = _find_column(board, tool_input["to_column_title"])
         if column is None:
             return f"No column titled '{tool_input['to_column_title']}' found.", True
-        moved = crud.move_card(session, card.id, column.id, len(column.cards))
+        moved = crud.move_card(session, board_id, card.id, column.id, len(column.cards))
         return f"Moved card '{moved.title}' to column '{column.title}'.", False
 
     return f"Unknown tool: {name}", True
 
 
-def run_chat(session: Session, user_message: str) -> str:
+def run_chat(session: Session, board_id: int, user_message: str) -> str:
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise AIConfigurationError("ANTHROPIC_API_KEY is not configured.")
 
@@ -163,7 +167,7 @@ def run_chat(session: Session, user_message: str) -> str:
         for block in response.content:
             if block.type != "tool_use":
                 continue
-            result_text, is_error = _run_tool(session, block.name, block.input)
+            result_text, is_error = _run_tool(session, board_id, block.name, block.input)
             tool_results.append(
                 {
                     "type": "tool_result",

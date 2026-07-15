@@ -16,6 +16,9 @@ export function CardPreview({ card }: CardPreviewProps) {
       {card.details ? (
         <p className="kanban-card-details">{card.details}</p>
       ) : null}
+      <span className={`kanban-card-priority-badge kanban-card-priority-${card.priority}`}>
+        {card.priority}
+      </span>
     </article>
   );
 }

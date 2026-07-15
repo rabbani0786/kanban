@@ -1,27 +1,40 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { checkCredentials } from "@/lib/auth";
+import { login, register } from "@/lib/auth";
 
 type LoginFormProps = {
   onSuccess: () => void;
 };
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
 
-    if (checkCredentials(username, password)) {
-      setError("");
+    try {
+      if (mode === "register") {
+        await register(username, password);
+      } else {
+        await login(username, password);
+      }
       onSuccess();
-      return;
+    } catch {
+      setError(
+        mode === "register"
+          ? "Could not create an account. The username may already be taken, or the password is too short (min 8 characters)."
+          : "Invalid username or password."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setError("Invalid username or password.");
   };
 
   return (
@@ -30,7 +43,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         <h1 className="login-title">
           Project <span className="app-header-accent">Board</span>
         </h1>
-        <p className="login-subtitle">Sign in to continue</p>
+        <p className="login-subtitle">
+          {mode === "login" ? "Sign in to continue" : "Create an account to get started"}
+        </p>
 
         <label className="login-field">
           Username
@@ -60,8 +75,25 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           </p>
         ) : null}
 
-        <button type="submit" className="login-submit">
-          Sign in
+        <button type="submit" className="login-submit" disabled={isSubmitting}>
+          {isSubmitting
+            ? "Please wait…"
+            : mode === "login"
+              ? "Sign in"
+              : "Create account"}
+        </button>
+
+        <button
+          type="button"
+          className="login-mode-toggle"
+          onClick={() => {
+            setError("");
+            setMode((current) => (current === "login" ? "register" : "login"));
+          }}
+        >
+          {mode === "login"
+            ? "Need an account? Register"
+            : "Already have an account? Sign in"}
         </button>
       </form>
     </div>

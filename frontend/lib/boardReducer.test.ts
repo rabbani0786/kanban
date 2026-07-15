@@ -33,6 +33,8 @@ describe("boardReducer", () => {
       id: "card-new",
       title: "New task",
       details: "Details here",
+      priority: "medium" as const,
+      dueDate: null,
       statusChangedAt: "2026-01-01T00:00:00.000Z",
     };
 
@@ -46,6 +48,22 @@ describe("boardReducer", () => {
     expect(
       next.columns.find((column) => column.id === "col-backlog")?.cardIds
     ).toContain("card-new");
+  });
+
+  it("updates a card in place", () => {
+    const updatedCard = {
+      ...initialBoard.cards["card-1"],
+      priority: "high" as const,
+      dueDate: "2026-08-01T00:00:00.000Z",
+    };
+
+    const next = boardReducer(initialBoard, {
+      type: "UPDATE_CARD",
+      card: updatedCard,
+    });
+
+    expect(next.cards["card-1"]).toEqual(updatedCard);
+    expect(next.columns).toEqual(initialBoard.columns);
   });
 
   it("deletes a card from board state", () => {

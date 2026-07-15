@@ -6,7 +6,11 @@ import pytest
 from sqlmodel import select
 
 from app import ai
-from app.models import Card, Column
+from app.models import Board, Card, Column
+
+
+def _board_id(session):
+    return session.exec(select(Board)).first().id
 
 
 def text_block(text):
@@ -33,13 +37,13 @@ def test_raises_a_configuration_error_when_no_api_key_is_set(session, monkeypatc
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
     with pytest.raises(ai.AIConfigurationError):
-        ai.run_chat(session, "hi")
+        ai.run_chat(session, _board_id(session), "hi")
 
 
 def test_replies_directly_when_no_tool_is_needed(session, monkeypatch):
     mock_anthropic(monkeypatch, [fake_response("end_turn", [text_block("Hello there!")])])
 
-    reply = ai.run_chat(session, "hi")
+    reply = ai.run_chat(session, _board_id(session), "hi")
 
     assert reply == "Hello there!"
 
@@ -61,7 +65,7 @@ def test_creates_a_card_via_tool_call(session, monkeypatch):
         ],
     )
 
-    reply = ai.run_chat(session, "add a card called New task to backlog")
+    reply = ai.run_chat(session, _board_id(session), "add a card called New task to backlog")
 
     assert reply == "Added the card."
     card = session.exec(select(Card).where(Card.title == "New task")).one()
@@ -85,7 +89,9 @@ def test_edits_a_card_via_tool_call(session, monkeypatch):
         ],
     )
 
-    reply = ai.run_chat(session, "rename Customer login page redesign to Sign-in page redesign")
+    reply = ai.run_chat(
+        session, _board_id(session), "rename Customer login page redesign to Sign-in page redesign"
+    )
 
     assert reply == "Renamed it."
     assert session.exec(select(Card).where(Card.title == "Sign-in page redesign")).one()
@@ -108,7 +114,7 @@ def test_moves_a_card_via_tool_call(session, monkeypatch):
         ],
     )
 
-    reply = ai.run_chat(session, "move Customer login page redesign to Done")
+    reply = ai.run_chat(session, _board_id(session), "move Customer login page redesign to Done")
 
     assert reply == "Moved it."
     card = session.exec(select(Card).where(Card.title == "Customer login page redesign")).one()
@@ -128,7 +134,7 @@ def test_reports_a_tool_error_back_to_the_model(session, monkeypatch):
         ],
     )
 
-    reply = ai.run_chat(session, "move Nope to Done")
+    reply = ai.run_chat(session, _board_id(session), "move Nope to Done")
 
     assert reply == "I couldn't find that card."
     second_call_messages = client.messages.create.call_args_list[1].kwargs["messages"]
@@ -139,7 +145,7 @@ def test_reports_a_tool_error_back_to_the_model(session, monkeypatch):
 
 def test_run_tool_create_card_with_unknown_column(session):
     message, is_error = ai._run_tool(
-        session, "create_card", {"column_title": "Nope", "title": "X"}
+        session, _board_id(session), "create_card", {"column_title": "Nope", "title": "X"}
     )
 
     assert is_error is True
@@ -147,7 +153,9 @@ def test_run_tool_create_card_with_unknown_column(session):
 
 
 def test_run_tool_edit_card_with_unknown_card(session):
-    message, is_error = ai._run_tool(session, "edit_card", {"card_title": "Nope"})
+    message, is_error = ai._run_tool(
+        session, _board_id(session), "edit_card", {"card_title": "Nope"}
+    )
 
     assert is_error is True
     assert "No card titled 'Nope'" in message
@@ -156,6 +164,7 @@ def test_run_tool_edit_card_with_unknown_card(session):
 def test_run_tool_move_card_with_unknown_target_column(session):
     message, is_error = ai._run_tool(
         session,
+        _board_id(session),
         "move_card",
         {"card_title": "Customer login page redesign", "to_column_title": "Nope"},
     )
@@ -165,7 +174,7 @@ def test_run_tool_move_card_with_unknown_target_column(session):
 
 
 def test_run_tool_unknown_tool_name(session):
-    message, is_error = ai._run_tool(session, "not_a_real_tool", {})
+    message, is_error = ai._run_tool(session, _board_id(session), "not_a_real_tool", {})
 
     assert is_error is True
     assert "Unknown tool" in message
@@ -178,7 +187,7 @@ def test_stops_after_max_iterations(session, monkeypatch):
     )
     mock_anthropic(monkeypatch, [always_tool_use] * ai.MAX_TOOL_ITERATIONS)
 
-    reply = ai.run_chat(session, "keep trying forever")
+    reply = ai.run_chat(session, _board_id(session), "keep trying forever")
 
     assert "ran out of steps" in reply
 
