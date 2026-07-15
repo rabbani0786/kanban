@@ -1,4 +1,4 @@
-# Kanban Project — Status Summary (Parts 1–9 complete, Part 10 not started)
+# Kanban Project — Status Summary (Parts 1–10 complete)
 
 > **Update**: The live AI integration test has now been run for real against the Anthropic API (key supplied by the user) and **passed** — the AI correctly created a card via the `create_card` tool end-to-end. The AI feature is no longer "untested"; see the updated section below.
 
@@ -16,7 +16,7 @@
 | 7 | Frontend wired to the real backend (no more dummy data); errors surface as banners instead of crashing |
 | 8 | AI sidebar chat (`POST /chat`) — natural-language create/edit/move via Claude tool-calling |
 | 9 | Edge-case tests, full Docker verification (clean rebuild, restart/down-up persistence), one real UI bug found and fixed (column titles were truncating with the new chat sidebar) |
-| 10 | **Not started** — README still describes the old frontend-only demo; no LinkedIn post |
+| 10 | README rewritten to describe the finished full-stack app (setup, features, stack, tests); no LinkedIn post (optional, not done) |
 
 ## What's working (verified, not assumed)
 
@@ -46,7 +46,7 @@
 ## What's untested / not yet done
 
 1. ~~The AI chat feature has never been run against the real Anthropic API.~~ **Done** — `test_ai_live.py` was run with a real key and passed; the AI correctly created a card via a live tool call. Note: `uv run` does not auto-load `.env` files — you need `uv run --env-file .env pytest ...` (or export the var yourself) for the key to actually be picked up.
-2. **Part 10 hasn't started.** The README (`README.md`) still describes the old frontend-only, no-persistence, no-Docker, no-AI version of the project. It needs a rewrite before this looks finished to anyone reading the repo.
+2. ~~Part 10 hasn't started.~~ **Done** — the README (`README.md`) now describes the finished full-stack app (Docker setup, stack, features, tests). The only remaining item from Part 10 is the optional LinkedIn post, which hasn't been written.
 3. No manual click-through testing has been done in a real browser by a human — everything here is automated (Playwright drives a real Chromium browser, but that's still not you looking at it).
 4. A cosmetic-only, environment-specific quirk: on this Windows machine, the e2e test runner occasionally logs a harmless `EPERM` warning when trying to wipe the test database between runs (has a retry+backoff and always falls back gracefully — never caused a test failure across many runs). Not an app defect, just noise you might see in the console.
 
