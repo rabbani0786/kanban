@@ -1,4 +1,5 @@
 import importlib
+from unittest.mock import MagicMock
 
 from sqlalchemy import inspect
 from sqlmodel import Session, select
@@ -59,6 +60,32 @@ def test_init_db_upgrades_a_legacy_single_board_schema(tmp_path, monkeypatch):
 
         boards = session.exec(select(Board).where(Board.user_id == 1)).all()
         assert len(boards) == 2
+
+
+def test_ensure_boards_user_id_not_unique_drops_the_constraint_by_name_on_postgres(monkeypatch):
+    """Regression test: the non-SQLite branch (the one Postgres production actually
+    runs) once referenced an undefined variable name here and crashed app startup
+    with a NameError, undetected because every other test in this file only
+    exercises the SQLite rebuild branch. Mock the engine so this runs the real
+    Postgres-shaped code path without needing a live Postgres instance."""
+    from app import db as db_module
+
+    mock_connection = MagicMock()
+    mock_engine = MagicMock()
+    mock_engine.dialect.name = "postgresql"
+    mock_engine.begin.return_value.__enter__.return_value = mock_connection
+    mock_engine.begin.return_value.__exit__.return_value = False
+
+    monkeypatch.setattr(db_module, "engine", mock_engine)
+    monkeypatch.setattr(db_module, "_boards_user_id_unique_name", lambda: "boards_user_id_key")
+
+    db_module._ensure_boards_user_id_not_unique()
+
+    executed_sql = [call.args[0] for call in mock_connection.exec_driver_sql.call_args_list]
+    assert executed_sql == [
+        'DROP INDEX IF EXISTS "boards_user_id_key"',
+        'ALTER TABLE boards DROP CONSTRAINT IF EXISTS "boards_user_id_key"',
+    ]
 
 
 def test_init_db_is_a_no_op_on_an_already_current_schema(tmp_path, monkeypatch):
