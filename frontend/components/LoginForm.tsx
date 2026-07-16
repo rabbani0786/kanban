@@ -26,11 +26,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         await login(username, password);
       }
       onSuccess();
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
       setError(
-        mode === "register"
-          ? "Could not create an account. The username may already be taken, or the password is too short (min 8 characters)."
-          : "Invalid username or password."
+        message || (mode === "register" ? "Could not create an account." : "Could not sign in.")
       );
     } finally {
       setIsSubmitting(false);

@@ -28,18 +28,52 @@ export function clearAuth(): void {
   sessionStorage.removeItem(USERNAME_KEY);
 }
 
+function capitalize(message: string): string {
+  return message.charAt(0).toUpperCase() + message.slice(1);
+}
+
+async function extractErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = await response.json();
+    const detail = data?.detail;
+
+    if (typeof detail === "string" && detail.trim()) {
+      return capitalize(detail);
+    }
+
+    if (Array.isArray(detail) && detail.length > 0) {
+      const messages = detail
+        .map((item) => (typeof item?.msg === "string" ? item.msg : null))
+        .filter((msg): msg is string => Boolean(msg))
+        .map((msg) => msg.replace(/^Value error,\s*/, ""));
+      if (messages.length > 0) {
+        return capitalize(messages.join(" "));
+      }
+    }
+  } catch {
+    // response body wasn't JSON (or was empty) — fall through to the generic message
+  }
+  return `Request failed with status ${response.status}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...init,
-  });
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...init,
+    });
+  } catch {
+    throw new Error("Could not reach the server. Check your connection and try again.");
+  }
 
   if (!response.ok) {
-    throw new Error(`Request to ${path} failed with status ${response.status}`);
+    throw new Error(await extractErrorMessage(response));
   }
 
   if (response.status === 204) {

@@ -27,10 +27,10 @@ describe("LoginForm", () => {
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 
-  it("shows an error and does not call onSuccess for wrong credentials", async () => {
+  it("shows the backend's error message and does not call onSuccess for wrong credentials", async () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn();
-    vi.mocked(auth.login).mockRejectedValue(new Error("Request failed with status 401"));
+    vi.mocked(auth.login).mockRejectedValue(new Error("Invalid username or password"));
 
     render(<LoginForm onSuccess={onSuccess} />);
 
@@ -38,7 +38,22 @@ describe("LoginForm", () => {
     await user.type(screen.getByLabelText("Password"), "wrong");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid username or password.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid username or password");
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a generic message when the error carries no detail", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    vi.mocked(auth.login).mockRejectedValue(new Error());
+
+    render(<LoginForm onSuccess={onSuccess} />);
+
+    await user.type(screen.getByLabelText("Username"), "user");
+    await user.type(screen.getByLabelText("Password"), "wrong");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in.");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
@@ -46,7 +61,7 @@ describe("LoginForm", () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn();
     vi.mocked(auth.login)
-      .mockRejectedValueOnce(new Error("Request failed with status 401"))
+      .mockRejectedValueOnce(new Error("Invalid username or password"))
       .mockResolvedValueOnce(undefined);
 
     render(<LoginForm onSuccess={onSuccess} />);
@@ -83,9 +98,9 @@ describe("LoginForm", () => {
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 
-  it("shows a registration error for a duplicate username", async () => {
+  it("shows the backend's error message for a duplicate username", async () => {
     const user = userEvent.setup();
-    vi.mocked(auth.register).mockRejectedValue(new Error("Request failed with status 409"));
+    vi.mocked(auth.register).mockRejectedValue(new Error("Username is already taken"));
 
     render(<LoginForm onSuccess={vi.fn()} />);
 
@@ -94,8 +109,24 @@ describe("LoginForm", () => {
     await user.type(screen.getByLabelText("Password"), "password123");
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
+    expect(await screen.findByRole("alert")).toHaveTextContent("Username is already taken");
+  });
+
+  it("shows the backend's validation message for a short password", async () => {
+    const user = userEvent.setup();
+    vi.mocked(auth.register).mockRejectedValue(
+      new Error("Password must be at least 8 characters")
+    );
+
+    render(<LoginForm onSuccess={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Need an account? Register" }));
+    await user.type(screen.getByLabelText("Username"), "newuser");
+    await user.type(screen.getByLabelText("Password"), "short12");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Could not create an account. The username may already be taken, or the password is too short (min 8 characters)."
+      "Password must be at least 8 characters"
     );
   });
 

@@ -68,6 +68,45 @@ describe("api", () => {
         "status 409"
       );
     });
+
+    it("surfaces the backend's detail message for a duplicate username", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse({ detail: "username is already taken" }, 409)
+      );
+
+      await expect(api.register("alice", "password123")).rejects.toThrow(
+        "Username is already taken"
+      );
+    });
+
+    it("surfaces a pydantic validation message for a short password", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse(
+          {
+            detail: [
+              {
+                type: "value_error",
+                loc: ["body", "password"],
+                msg: "Value error, password must be at least 8 characters",
+              },
+            ],
+          },
+          422
+        )
+      );
+
+      await expect(api.register("alice", "short")).rejects.toThrow(
+        "Password must be at least 8 characters"
+      );
+    });
+
+    it("reports an unreachable server distinctly from a validation error", async () => {
+      vi.mocked(fetch).mockRejectedValue(new TypeError("Failed to fetch"));
+
+      await expect(api.register("alice", "password123")).rejects.toThrow(
+        "Could not reach the server"
+      );
+    });
   });
 
   describe("login", () => {
