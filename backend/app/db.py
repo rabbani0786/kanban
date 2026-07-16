@@ -129,10 +129,10 @@ def _ensure_boards_user_id_not_unique() -> None:
         return
 
     with engine.begin() as connection:
-        connection.exec_driver_sql(f'DROP INDEX IF EXISTS "{constraint_name}"')
         connection.exec_driver_sql(
             f'ALTER TABLE boards DROP CONSTRAINT IF EXISTS "{constraint_name}"'
         )
+        connection.exec_driver_sql(f'DROP INDEX IF EXISTS "{constraint_name}"')
 
 
 def init_db() -> None:

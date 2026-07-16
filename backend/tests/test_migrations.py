@@ -83,8 +83,8 @@ def test_ensure_boards_user_id_not_unique_drops_the_constraint_by_name_on_postgr
 
     executed_sql = [call.args[0] for call in mock_connection.exec_driver_sql.call_args_list]
     assert executed_sql == [
-        'DROP INDEX IF EXISTS "boards_user_id_key"',
         'ALTER TABLE boards DROP CONSTRAINT IF EXISTS "boards_user_id_key"',
+        'DROP INDEX IF EXISTS "boards_user_id_key"',
     ]
 
 
